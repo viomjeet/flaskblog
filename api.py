@@ -21,10 +21,15 @@ finally:
     if 'conn' in locals() and conn:
         conn.close()
         print("Connection closed.")
+
 app = Flask(__name__)
 items = []
-conn = pymssql.connect(server=server, user=username,
-                       password=password, database=database)
+conn = pymssql.connect(
+    server=server,
+    user=username,
+    password=password,
+    database=database
+)
 
 
 @app.route('/items', methods=['GET'])
@@ -92,7 +97,8 @@ def create_item():
 def update_item(id):
     reqData = request.json
     cursor = conn.cursor()
-    cursor.execute("update users set username = %s where id=%s",(reqData['username'], id))
+    cursor.execute("update users set username = %s where id=%s",
+                   (reqData['username'], id))
     conn.commit()
     return jsonify("User updated successfully!"), 201
 
@@ -100,9 +106,10 @@ def update_item(id):
 @app.route('/items/<int:id>', methods=['DELETE'])
 def delete_item(id):
     cursor = conn.cursor()
-    cursor.execute("delete from users where id=%s",(id))
+    cursor.execute("delete from users where id=%s", (id))
     conn.commit()
     return jsonify("User deleted successfully!"), 201
+
 
 if __name__ == '__main__':
     app.run(debug=True)
