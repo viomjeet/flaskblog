@@ -1,12 +1,16 @@
 from flask import Flask, jsonify, request
 import pymssql
 
-server = 'DESKTOP-B7RVLLM'  # e.g., 'localhost' or '192.168.1.1'
+server = 'DESKTOP-B7RVLLM'
 database = 'GingerView'
 username = ''
 password = ''
-conn = pymssql.connect(server=server, user=username,
-                       password=password, database=database)
+conn = pymssql.connect(
+    server=server,
+    user=username,
+    password=password,
+    database=database
+)
 
 try:
     cursor = conn.cursor()
@@ -17,10 +21,7 @@ finally:
     if 'conn' in locals() and conn:
         conn.close()
         print("Connection closed.")
-
 app = Flask(__name__)
-
-# In-memory data store
 items = []
 conn = pymssql.connect(server=server, user=username,
                        password=password, database=database)
@@ -57,12 +58,14 @@ def get_item(id):
     except pymssql.Error as e:
         return jsonify(e)
 
+
 @app.route('/items', methods=['POST'])
 def create_item():
     try:
         reqData = request.json
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM users where useremail = %s or userid = %s", (reqData['useremail'],reqData['userid']))
+        cursor.execute("SELECT * FROM users where useremail = %s or userid = %s",
+                       (reqData['useremail'], reqData['userid']))
         rows = cursor.fetchall()
         data = [
             {column[0]: value for column,
@@ -72,7 +75,7 @@ def create_item():
         if len(data) == 0:
             cursor = conn.cursor()
             cursor.execute("insert into users(useremail,userid,username,userpassword) values(%s, %s, %s, %s)",
-                       (reqData['useremail'], reqData['userid'], reqData['username'], reqData['userpassword']))
+                           (reqData['useremail'], reqData['userid'], reqData['username'], reqData['userpassword']))
             conn.commit()
             return jsonify("Data inserted successfully!"), 201
         for i in data:
@@ -87,23 +90,19 @@ def create_item():
 
 @app.route('/items/<int:id>', methods=['PUT'])
 def update_item(id):
-    data = request.json
-    item = next((item for item in items if item['id'] == id), None)
-    if item is None:
-        return jsonify({'error': 'Item not found'}), 404
-    item.update(data)
-    return jsonify(item)
+    reqData = request.json
+    cursor = conn.cursor()
+    cursor.execute("update users set username = %s where id=%s",(reqData['username'], id))
+    conn.commit()
+    return jsonify("User updated successfully!"), 201
 
 
 @app.route('/items/<int:id>', methods=['DELETE'])
 def delete_item(id):
-    # """Delete an item."""
-    item = next((item for item in items if item['id'] == id), None)
-    if item is None:
-        return jsonify({'error': 'Item not found'}), 404
-    items.remove(item)
-    return jsonify({'sucess': item['name'] + ' is deleted.'}), 200
-
+    cursor = conn.cursor()
+    cursor.execute("delete from users where id=%s",(id))
+    conn.commit()
+    return jsonify("User deleted successfully!"), 201
 
 if __name__ == '__main__':
     app.run(debug=True)
