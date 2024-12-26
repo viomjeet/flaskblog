@@ -23,7 +23,6 @@ finally:
         print("Connection closed.")
 
 app = Flask(__name__)
-items = []
 conn = pymssql.connect(
     server=server,
     user=username,
@@ -32,8 +31,8 @@ conn = pymssql.connect(
 )
 
 
-@app.route('/items', methods=['GET'])
-def get_items():
+@app.route('/users', methods=['GET'])
+def get_Users():
     try:
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM users")
@@ -48,8 +47,8 @@ def get_items():
         return jsonify(e)
 
 
-@app.route('/items/<int:id>', methods=['GET'])
-def get_item(id):
+@app.route('/users/<int:id>', methods=['GET'])
+def get_User(id):
     try:
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM users where id = %s", (id))
@@ -64,47 +63,97 @@ def get_item(id):
         return jsonify(e)
 
 
-@app.route('/items', methods=['POST'])
-def create_item():
+def Check_User(type):
     try:
         reqData = request.json
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM users where useremail = %s or userid = %s",
-                       (reqData['useremail'], reqData['userid']))
+        if type == 'register':
+            cursor.execute("SELECT * FROM users where useremail = %s or userid = %s",
+                           (reqData['useremail'], reqData['userid']))
+        if type == 'login':
+            cursor.execute("SELECT * FROM users where useremail = %s and userpassword = %s",
+                           (reqData['useremail'], reqData['userpassword']))
         rows = cursor.fetchall()
+
         data = [
             {column[0]: value for column,
                 value in zip(cursor.description, row)}
             for row in rows
         ]
-        if len(data) == 0:
-            cursor = conn.cursor()
-            cursor.execute("insert into users(useremail,userid,username,userpassword) values(%s, %s, %s, %s)",
-                           (reqData['useremail'], reqData['userid'], reqData['username'], reqData['userpassword']))
-            conn.commit()
-            return jsonify("Data inserted successfully!"), 201
-        for i in data:
-            if i['useremail'] == reqData['useremail']:
-                return jsonify("Email already exist."), 409
-        for i in data:
-            if i['userid'] == reqData['userid']:
-                return jsonify("Userid already exist."), 409
+
+        if type == 'register':
+            if len(data) == 0:
+                return 'success'
+            for i in data:
+                if i['useremail'] == reqData['useremail']:
+                    return "Email already exist."
+            for i in data:
+                if i['userid'] == reqData['userid']:
+                    return "Userid already exist."
+
+        if type == 'login':
+            if len(data) == 0:
+                return 'Invalid Credentials.'
+            else:
+                return 'success'
     except pymssql.Error as e:
         return jsonify(e)
 
 
-@app.route('/items/<int:id>', methods=['PUT'])
-def update_item(id):
-    reqData = request.json
-    cursor = conn.cursor()
-    cursor.execute("update users set username = %s where id=%s",
-                   (reqData['username'], id))
-    conn.commit()
-    return jsonify("User updated successfully!"), 201
+@app.route('/register', methods=['POST'])
+def register_User():
+    if Check_User("register") == 'success':
+        reqData = request.json
+        cursor = conn.cursor()
+        cursor.execute("insert into users(useremail,userid,username,userpassword, isActive) values(%s, %s, %s, %s, %s)",
+                       (reqData['useremail'], reqData['userid'], reqData['username'], reqData['userpassword'], 0))
+        conn.commit()
+        return jsonify("User register successfully!"), 201
+    else:
+        return jsonify(Check_User("register")), 409
 
 
-@app.route('/items/<int:id>', methods=['DELETE'])
-def delete_item(id):
+@app.route('/login', methods=['POST'])
+def login_User():
+    if Check_User('login') == 'success':
+        reqData = request.json
+        cursor = conn.cursor()
+        cursor.execute(
+            "update users set isActive = %s where useremail=%s", (1, reqData['useremail']))
+        conn.commit()
+        return jsonify("User login successfully!"), 201
+    else:
+        return jsonify(Check_User('login')), 409
+
+
+@app.route('/logout', methods=['POST'])
+def logout_User():
+    try:
+        reqData = request.json
+        cursor = conn.cursor()
+        cursor.execute(
+            "update users set isActive = %s where useremail=%s", (0, reqData['useremail']))
+        conn.commit()
+        return jsonify("User logout successfully!"), 201
+    except pymssql.Error as e:
+        return jsonify(e)
+
+
+@app.route('/users/<int:id>', methods=['PUT'])
+def update_User(id):
+    try:
+        reqData = request.json
+        cursor = conn.cursor()
+        cursor.execute("update users set username = %s where id=%s",
+                       (reqData['username'], id))
+        conn.commit()
+        return jsonify("User updated successfully!"), 201
+    except pymssql.Error as e:
+        return jsonify(e)
+
+
+@app.route('/users/<int:id>', methods=['DELETE'])
+def delete_User(id):
     cursor = conn.cursor()
     cursor.execute("delete from users where id=%s", (id))
     conn.commit()
