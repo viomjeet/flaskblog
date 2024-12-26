@@ -1,18 +1,13 @@
 from flask import Flask, jsonify, request
 import pymssql
+import os
+from dotenv import load_dotenv
+load_dotenv()
 
-server = 'DESKTOP-B7RVLLM'
-database = 'GingerView'
-username = ''
-password = ''
-conn = pymssql.connect(
-    server=server,
-    user=username,
-    password=password,
-    database=database
-)
+app = Flask(__name__)
 
 try:
+    conn = pymssql.connect(server=os.getenv("SECRET_SERVER"), user='', password='', database='GingerView')
     cursor = conn.cursor()
     print("Connection successful!")
 except pymssql.Error as e:
@@ -22,13 +17,7 @@ finally:
         conn.close()
         print("Connection closed.")
 
-app = Flask(__name__)
-conn = pymssql.connect(
-    server=server,
-    user=username,
-    password=password,
-    database=database
-)
+conn = pymssql.connect(server=os.getenv("SECRET_SERVER"), user='', password='', database='GingerView')
 
 
 @app.route('/users', methods=['GET'])
@@ -47,7 +36,7 @@ def get_Users():
         return jsonify(e)
 
 
-@app.route('/users/<int:id>', methods=['GET'])
+@app.route('/users/<int:id>', methods=['POST'])
 def get_User(id):
     try:
         cursor = conn.cursor()
