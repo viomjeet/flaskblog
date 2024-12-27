@@ -24,7 +24,7 @@ conn = pymssql.connect(server=os.getenv("SECRET_SERVER"), user='', password='', 
 def get_Users():
     try:
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM users")
+        cursor.execute("SELECT id, username, useremail, userid, isActive FROM users")
         rows = cursor.fetchall()
         data = [
             {column[0]: value for column,
@@ -40,12 +40,10 @@ def get_Users():
 def get_User(id):
     try:
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM users where id = %s", (id))
+        cursor.execute("SELECT username, useremail, userid, isActive FROM users where id = %s", (id))
         rows = cursor.fetchall()
         data = [
-            {column[0]: value for column,
-                value in zip(cursor.description, row)}
-            for row in rows
+            {column[0]: value for column,value in zip(cursor.description, row)} for row in rows
         ]
         return jsonify(data)
     except pymssql.Error as e:
